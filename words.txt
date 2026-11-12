@@ -1,0 +1,24 @@
+# 拼音打字练习 词库文件（UTF-8）
+# 格式：汉字|拼音，或 汉字|拼音|朗读文本
+# 以 # 开头为注释；判定答案时忽略声调、大小写和空格。
+
+你好|ni hao
+谢谢|xie xie
+早上好|zao shang hao
+再见|zai jian
+对不起|dui bu qi
+没关系|mei guan xi
+请问|qing wen
+学习|xue xi
+老师|lao shi
+同学|tong xue
+中国|zhong guo
+北京|bei jing
+上海|shang hai
+苹果|ping guo
+电脑|dian nao
+图书馆|tu shu guan
+汉语|han yu
+拼音|pin yin
+读屏软件|du ping ruan jian
+练习打字|lian xi da zi

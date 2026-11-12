@@ -1,0 +1,15 @@
+# Build outputs
+*.exe
+*.pdb
+*.obj
+*.dll.config
+bin/
+obj/
+
+# Backups / temp
+*.bak
+*.tmp
+*.log
+
+# Exported template (generated)
+词库模板.txt

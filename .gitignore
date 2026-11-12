@@ -13,3 +13,6 @@ obj/
 
 # Exported template (generated)
 词库模板.txt
+
+# Release packaging
+dist/

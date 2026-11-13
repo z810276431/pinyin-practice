@@ -520,8 +520,12 @@ try {
     if (Test-Path $wordsPath) { $uploadFiles += @{ Path = $wordsPath; Name = 'words.txt' } }
 
     # 新 Release 没有任何附件时，API 返回 $null 而不是空数组，这里统一成数组。
-    $assets = @(Invoke-GitHubApi -Method Get -Uri "$base/releases/$($release.id)/assets" | Where-Object { $null -ne $_ })
+    $assetsRaw = Invoke-GitHubApi -Method Get -Uri "$base/releases/$($release.id)/assets"
+    Write-Host ("DEBUG assetsRawType=" + $(if ($null -eq $assetsRaw) { 'null' } else { $assetsRaw.GetType().FullName }))
+    $assets = @($assetsRaw | Where-Object { $null -ne $_ })
+    Write-Host ("DEBUG assetsCount=" + $assets.Count)
     foreach ($existing in $assets) {
+        Write-Host ("DEBUG itemType=" + $existing.GetType().FullName)
         $existingName = [string]$existing.name
         foreach ($file in $uploadFiles) {
             if ($existingName -eq $file.Name) {

@@ -582,6 +582,10 @@ try {
 catch {
     Write-Host ''
     Write-Host "[失败] $($_.Exception.Message)" -ForegroundColor Red
+    if ($_.ScriptStackTrace) {
+        Write-Host '调用栈：' -ForegroundColor DarkGray
+        Write-Host $_.ScriptStackTrace -ForegroundColor DarkGray
+    }
     exit 1
 }
 finally {

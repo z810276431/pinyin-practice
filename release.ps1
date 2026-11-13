@@ -96,17 +96,35 @@ function Fail {
 
 function Invoke-Git {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
-    $output = & git @GitArgs 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw ("git " + ($GitArgs -join ' ') + " 失败：`n" + ($output -join "`n"))
+    # PowerShell 5.1 会把 git 写到 stderr 的提示（如 Everything up-to-date）
+    # 在 ErrorActionPreference=Stop 下转成终止性错误，因此这里临时放宽并只看退出码。
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & git @GitArgs 2>&1
+        $code = $LASTEXITCODE
     }
-    return $output
+    finally {
+        $ErrorActionPreference = $previous
+    }
+    if ($code -ne 0) {
+        $text = (@($output) | ForEach-Object { [string]$_ }) -join "`n"
+        throw ("git " + ($GitArgs -join ' ') + " 失败（退出码 $code）：`n" + $text)
+    }
+    return @($output)
 }
 
 function Invoke-GitQuiet {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
-    & git @GitArgs *> $null
-    return $LASTEXITCODE
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & git @GitArgs *> $null
+        return $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
 }
 
 function Invoke-GitHubApi {
@@ -153,8 +171,8 @@ function Get-GitHubToken {
 }
 
 function Get-RepoSlug {
-    $url = @(& git remote get-url origin 2>$null)
-    if ($LASTEXITCODE -ne 0 -or $url.Count -eq 0) { Fail '当前仓库没有 origin 远端。' }
+    $url = @(Invoke-Git remote get-url origin)
+    if ($url.Count -eq 0) { Fail '当前仓库没有 origin 远端。' }
     $text = [string]$url[0]
     $match = [regex]::Match($text, 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?/?$')
     if (-not $match.Success) { Fail "无法从远端地址识别 GitHub 仓库：$text" }
@@ -173,8 +191,8 @@ function ConvertTo-VersionText {
 
 function Get-LatestVersionText {
     # 同时参考本地与远端标签，避免远端已有版本被误判为首次发版。
-    $tags = @(& git tag --list 'v*' 2>$null)
-    foreach ($remoteLine in @(& git ls-remote --tags --refs origin 'v*' 2>$null)) {
+    $tags = @(Invoke-Git tag --list 'v*')
+    foreach ($remoteLine in @(Invoke-Git ls-remote --tags --refs origin 'v*')) {
         $text = [string]$remoteLine
         $index = $text.LastIndexOf('refs/tags/')
         if ($index -lt 0) { continue }
@@ -420,8 +438,8 @@ try {
         Write-Info '已创建提交。'
     }
 
-    $headBranch = (@(& git rev-parse --abbrev-ref HEAD))[0].Trim()
-    $headCommit = (@(& git rev-parse HEAD))[0].Trim()
+    $headBranch = (@(Invoke-Git rev-parse --abbrev-ref HEAD))[0].Trim()
+    $headCommit = (@(Invoke-Git rev-parse HEAD))[0].Trim()
     Write-Info "分支：$headBranch"
     Write-Info "提交：$headCommit"
 
@@ -429,7 +447,7 @@ try {
     Write-Step "准备标签 $tag"
     $tagExists = ((Invoke-GitQuiet rev-parse -q --verify "refs/tags/$tag") -eq 0)
     if ($tagExists) {
-        $tagCommit = (@(& git rev-list -n 1 $tag))[0].Trim()
+        $tagCommit = (@(Invoke-Git rev-list -n 1 $tag))[0].Trim()
         if ($tagCommit -ne $headCommit) {
             if (-not $Force) {
                 Fail "标签 $tag 已存在并指向 $tagCommit，不是当前提交。请换版本号，或加 -Force 强制移动。"

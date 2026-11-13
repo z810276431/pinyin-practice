@@ -145,7 +145,8 @@ namespace PinyinPractice
 "# 1）拼音带不带声调都可以，音节之间可以用空格，也可以不空格。\r\n" +
 "#    以下写法都可以：你好|nǐ hǎo    你好|ni hao    你好|nihao\r\n" +
 "# 2）# 开头的行为注释，会被忽略；空行也会被忽略。\r\n" +
-"# 3）判定答案时忽略声调、大小写和空格，所以输入 nihao 或 ni hao 都算正确。\r\n" +
+"# 3）判定时忽略声调、大小写和空格；练习时连续输入 nihao，按回车或空格确认。\r\n" +
+"#    词库中及粘贴的答案仍可含音节空格；导入窗口的空格键仍用于输入空格。\r\n" +
 "# 4）ü 可以写作 ü、v 或 u:。\r\n" +
 "# 5）分隔符除了竖线，也支持全角竖线｜、制表符、逗号、分号、等号和冒号。\r\n" +
 "# 6）在下面示例后继续添加，或整段替换成自己的词语即可。\r\n" +
@@ -717,7 +718,7 @@ namespace PinyinPractice
             AutoScaleMode = AutoScaleMode.Dpi;
             KeyPreview = true;
             AccessibleName = "拼音打字练习";
-            AccessibleDescription = "听读音，输入拼音，按回车确认的拼音打字练习程序。";
+            AccessibleDescription = "听读音，输入拼音，按回车或空格确认的拼音打字练习程序。";
 
             BuildUi();
             InitSpeech();
@@ -777,7 +778,7 @@ namespace PinyinPractice
             var inputLabel = new Label
             {
                 AutoSize = true,
-                Text = "输入拼音，然后按 Enter 确认：",
+                Text = "输入拼音，然后按 Enter 或空格确认：",
                 AccessibleName = "输入提示",
                 Margin = new Padding(0, 6, 0, 4)
             };
@@ -788,7 +789,7 @@ namespace PinyinPractice
                 Font = new Font("Microsoft YaHei UI", 15F, FontStyle.Regular),
                 ImeMode = ImeMode.Off,
                 AccessibleName = "拼音输入框",
-                AccessibleDescription = "在这里输入听到的词语的拼音，按回车确认。按 F5 可重播读音，按 Ctrl+N 可跳过。",
+                AccessibleDescription = "连续输入词语的拼音，不必分隔音节，按回车或空格确认。按 F5 可重播读音并保留输入和光标，按 Ctrl+N 可跳过。",
                 Margin = new Padding(0, 0, 0, 8)
             };
             _inputBox.KeyDown += InputBox_KeyDown;
@@ -805,7 +806,7 @@ namespace PinyinPractice
             _replayButton = new Button { Text = "重播读音 (F5)", AutoSize = true, AccessibleName = "重播读音按钮" };
             _replayButton.Click += delegate { ReplayWord(); };
 
-            _submitButton = new Button { Text = "确认 (Enter)", AutoSize = true, AccessibleName = "确认答案按钮" };
+            _submitButton = new Button { Text = "确认 (Enter / 空格)", AutoSize = true, AccessibleName = "确认答案按钮", AccessibleDescription = "在拼音输入框内按回车或空格提交答案。" };
             _submitButton.Click += delegate { SubmitAnswer(); };
 
             _skipButton = new Button { Text = "跳过 (Ctrl+N)", AutoSize = true, AccessibleName = "跳过当前词语按钮" };
@@ -873,7 +874,7 @@ namespace PinyinPractice
             {
                 Dock = DockStyle.Fill,
                 AutoSize = false,
-                Text = "快捷键：Enter 确认；F5 或 Ctrl+R 重播读音；Ctrl+N 跳过；Ctrl+I 导入词库；Ctrl+T 导出词库模板。\r\n词库文件 words.txt 与程序放在同一目录，每行格式：汉字|拼音（拼音可带声调、可用空格分隔；可再加第三个字段指定朗读文本）。",
+                Text = "快捷键：Enter 或空格确认；F5 或 Ctrl+R 重播读音（保留输入和光标）；Ctrl+N 跳过；Ctrl+I 导入词库；Ctrl+T 导出词库模板。\r\n词库文件 words.txt 与程序放在同一目录，每行格式：汉字|拼音（拼音可带声调、可用空格分隔；可再加第三个字段指定朗读文本）。",
                 AccessibleName = "帮助",
                 Margin = new Padding(0, 0, 0, 0)
             };
@@ -1016,7 +1017,7 @@ namespace PinyinPractice
             _progressLabel.AccessibleName = _progressLabel.Text;
             _inputBox.Text = string.Empty;
 
-            UpdateStatus("状态：" + _progressLabel.Text + "。请听读音并输入拼音，按 Enter 确认。", false);
+            UpdateStatus("状态：" + _progressLabel.Text + "。请听读音并输入拼音，按 Enter 或空格确认。", false);
         }
 
         private void Say(string text, bool flush)
@@ -1038,7 +1039,12 @@ namespace PinyinPractice
             if (_current == null) return;
             Say("请听读音。" + WordSpeech(), true);
             UpdateStatus("状态：重新播报当前词语读音。", false);
-            try { _inputBox.Focus(); _inputBox.SelectAll(); } catch { }
+            // Replaying must not select all text or move the user's caret.
+            // Restore the selection explicitly when returning from a button.
+            int selectionStart = _inputBox.SelectionStart;
+            int selectionLength = _inputBox.SelectionLength;
+            _inputBox.Focus();
+            _inputBox.Select(selectionStart, selectionLength);
         }
 
         private void SubmitAnswer()
@@ -1049,7 +1055,7 @@ namespace PinyinPractice
             if (input == null || input.Trim().Length == 0)
             {
                 Say("请先输入拼音。", true);
-                UpdateStatus("状态：请先输入拼音，再按 Enter 确认。", true);
+                UpdateStatus("状态：请先输入拼音，再按 Enter 或空格确认。", true);
                 try { _inputBox.Focus(); } catch { }
                 return;
             }
@@ -1208,7 +1214,9 @@ namespace PinyinPractice
 
         private void InputBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
+            // Only the practice input treats a plain Space as confirmation.
+            // Leave system/IME shortcuts (e.g. Ctrl+Space, Alt+Space) alone.
+            if (e.KeyCode == Keys.Enter || (e.KeyCode == Keys.Space && e.Modifiers == Keys.None))
             {
                 e.SuppressKeyPress = true;
                 SubmitAnswer();

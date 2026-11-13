@@ -519,13 +519,20 @@ try {
     $wordsPath = Join-Path $root 'words.txt'
     if (Test-Path $wordsPath) { $uploadFiles += @{ Path = $wordsPath; Name = 'words.txt' } }
 
-    # 新 Release 没有任何附件时，API 返回 $null 而不是空数组，这里统一成数组。
+    # 同名旧附件先删除，保证附件与本次构建一致。
+    # 无附件时 API 可能返回空值、空数组或嵌套空数组，这里逐个校验对象类型，
+    # 避免严格模式下访问不存在的 name 属性。
     $assetsRaw = Invoke-GitHubApi -Method Get -Uri "$base/releases/$($release.id)/assets"
-    Write-Host ("DEBUG assetsRawType=" + $(if ($null -eq $assetsRaw) { 'null' } else { $assetsRaw.GetType().FullName }))
-    $assets = @($assetsRaw | Where-Object { $null -ne $_ })
-    Write-Host ("DEBUG assetsCount=" + $assets.Count)
+    $assets = @()
+    if ($null -ne $assetsRaw) {
+        foreach ($candidate in @($assetsRaw)) {
+            if ($null -eq $candidate) { continue }
+            if ($candidate -is [array]) { continue }
+            if ($null -eq $candidate.PSObject.Properties['id']) { continue }
+            $assets += $candidate
+        }
+    }
     foreach ($existing in $assets) {
-        Write-Host ("DEBUG itemType=" + $existing.GetType().FullName)
         $existingName = [string]$existing.name
         foreach ($file in $uploadFiles) {
             if ($existingName -eq $file.Name) {

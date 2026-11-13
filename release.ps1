@@ -519,12 +519,14 @@ try {
     $wordsPath = Join-Path $root 'words.txt'
     if (Test-Path $wordsPath) { $uploadFiles += @{ Path = $wordsPath; Name = 'words.txt' } }
 
-    $assets = @(Invoke-GitHubApi -Method Get -Uri "$base/releases/$($release.id)/assets")
+    # 新 Release 没有任何附件时，API 返回 $null 而不是空数组，这里统一成数组。
+    $assets = @(Invoke-GitHubApi -Method Get -Uri "$base/releases/$($release.id)/assets" | Where-Object { $null -ne $_ })
     foreach ($existing in $assets) {
+        $existingName = [string]$existing.name
         foreach ($file in $uploadFiles) {
-            if ($existing.name -eq $file.Name) {
+            if ($existingName -eq $file.Name) {
                 Invoke-GitHubApi -Method Delete -Uri "$base/releases/assets/$($existing.id)" | Out-Null
-                Write-Info "已删除旧附件：$($existing.name)"
+                Write-Info "已删除旧附件：$existingName"
                 break
             }
         }
@@ -535,27 +537,36 @@ try {
     foreach ($file in $uploadFiles) {
         $encodedName = [uri]::EscapeDataString($file.Name)
         $url = "$uploadBase`?name=$encodedName"
-        $response = & curl.exe -sS -X POST `
-            -H "Authorization: token $script:Token" `
-            -H 'User-Agent: practice-toolkit-release-script' `
-            -H 'Content-Type: application/octet-stream' `
-            --data-binary "@$($file.Path)" $url 2>&1
-        $responseText = ($response -join "`n")
-        if ($LASTEXITCODE -ne 0) { Fail "上传附件 $($file.Name) 失败：$responseText" }
+        # 同样需要绕过 5.1 对 stderr 的异常转换。
+        $previous = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $response = & curl.exe -sS -X POST `
+                -H "Authorization: token $script:Token" `
+                -H 'User-Agent: practice-toolkit-release-script' `
+                -H 'Content-Type: application/octet-stream' `
+                --data-binary "@$($file.Path)" $url 2>&1
+            $curlCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $previous
+        }
+        $responseText = (@($response) | ForEach-Object { [string]$_ }) -join "`n"
+        if ($curlCode -ne 0) { Fail "上传附件 $($file.Name) 失败（curl 退出码 $curlCode）：$responseText" }
         try {
             $parsed = $responseText | ConvertFrom-Json
         }
         catch {
             Fail "上传附件 $($file.Name) 返回无法解析：$responseText"
         }
-        if ($parsed.state -ne 'uploaded') { Fail "上传附件 $($file.Name) 失败：$responseText" }
+        if ([string]$parsed.state -ne 'uploaded') { Fail "上传附件 $($file.Name) 失败：$responseText" }
         Write-Info ("已上传 {0}（{1:N0} 字节）" -f $parsed.name, $parsed.size)
     }
 
     # ---------- 10. 结果
     Write-Step '发版完成'
     $final = Invoke-GitHubApi -Method Get -Uri "$base/releases/tags/$tag"
-    $finalAssets = @($final.assets)
+    $finalAssets = @($final.assets | Where-Object { $null -ne $_ })
     Write-Host ''
     Write-Host ("版本：{0}" -f $final.tag_name) -ForegroundColor Green
     Write-Host ("页面：{0}" -f $final.html_url) -ForegroundColor Green

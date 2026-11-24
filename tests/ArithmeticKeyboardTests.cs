@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -30,6 +31,7 @@ internal static class ArithmeticKeyboardTests
                 var operation = Field<ComboBox>(form, "_operationBox");
                 var level = Field<ComboBox>(form, "_levelBox");
                 var operandCount = Field<ComboBox>(form, "_operandCountBox");
+                var rangeBox = Field<ComboBox>(form, "_rangeBox");
                 var problem = Field<ArithmeticProblem>(form, "_current");
 
                 Assert(level.Items.Count == 3 && level.SelectedIndex == 0, "level group offers beginner, intermediate and advanced");
@@ -56,6 +58,45 @@ internal static class ArithmeticKeyboardTests
                 problem = Field<ArithmeticProblem>(form, "_current");
                 Assert(Array.IndexOf(problem.Operators, OperationKind.Addition) >= 0 && Array.IndexOf(problem.Operators, OperationKind.Subtraction) >= 0,
                     "advanced compound operation contains both addition and subtraction");
+
+                // 乘除法：初级固定 9×9 乘法表以内（停用范围下拉框）；
+                // 中级和高级与范围联动（范围下拉框可用）。
+                operation.SelectedIndex = 3; // 乘法（当前级别：高级）
+                Application.DoEvents();
+                Assert(rangeBox.Enabled, "advanced multiplication links range selector");
+                operation.SelectedIndex = 4; // 除法
+                Application.DoEvents();
+                Assert(rangeBox.Enabled, "advanced division links range selector");
+                operation.SelectedIndex = 0;
+                Application.DoEvents();
+                Assert(rangeBox.Enabled, "mixed operation keeps range selector enabled");
+                level.SelectedIndex = 0; // 初级
+                Application.DoEvents();
+                operation.SelectedIndex = 3; // 乘法
+                Application.DoEvents();
+                Assert(!rangeBox.Enabled, "beginner multiplication disables range selector");
+                problem = Field<ArithmeticProblem>(form, "_current");
+                Assert(problem.Numbers.All(n => n >= 1 && n <= 9) && problem.Answer <= 81,
+                    "beginner multiplication stays within the 9x9 table");
+                operation.SelectedIndex = 4; // 除法
+                Application.DoEvents();
+                Assert(!rangeBox.Enabled, "beginner division disables range selector");
+                problem = Field<ArithmeticProblem>(form, "_current");
+                Assert(problem.Numbers[0] <= 81 && problem.Numbers.Skip(1).All(n => n >= 1 && n <= 9),
+                    "beginner division keeps dividend within 81 and divisors within 9");
+                level.SelectedIndex = 1; // 中级
+                Application.DoEvents();
+                Assert(rangeBox.Enabled, "intermediate multiplication re-enables range selector");
+                problem = Field<ArithmeticProblem>(form, "_current");
+                Assert(problem.Numbers[0] <= 20, "intermediate division dividend within selected range");
+                operation.SelectedIndex = 3; // 乘法
+                Application.DoEvents();
+                problem = Field<ArithmeticProblem>(form, "_current");
+                Assert(problem.Numbers.All(n => n >= 1 && n <= 20) && problem.Answer <= 400,
+                    "intermediate multiplication factors within selected range");
+                operation.SelectedIndex = 0;
+                level.SelectedIndex = 0;
+                Application.DoEvents();
                 input.Text = "123";
                 input.Select(1, 0);
                 Assert(KeyMessage(input, Keys.F5), "F5 is consumed by arithmetic form");
@@ -126,7 +167,9 @@ internal static class ArithmeticKeyboardTests
 
     private static T Field<T>(object owner, string name)
     {
-        return (T)owner.GetType().GetField(name, PrivateInstance).GetValue(owner);
+        var field = owner.GetType().GetField(name, PrivateInstance);
+        if (field == null) throw new MissingFieldException(owner.GetType().Name, name);
+        return (T)field.GetValue(owner);
     }
 
     private static void SetField(object owner, string name, object value)

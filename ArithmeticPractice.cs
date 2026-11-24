@@ -87,6 +87,29 @@ namespace ArithmeticPractice
             }
             else if (problem.MissingIndex < -1 || problem.MissingIndex >= 2) { why = "intermediate missing position"; return false; }
 
+            // 乘除法：初级固定 9×9 乘法表以内；中级和高级与所选范围联动。
+            // 乘法的范围约束因数（连乘积不超过范围数的平方），除法的范围约束被除数和除数。
+            int operandCap;
+            int resultCap;
+            if (requested == OperationKind.Multiplication)
+            {
+                operandCap = level == PracticeLevel.Beginner ? 9 : range;
+                resultCap = level == PracticeLevel.Beginner ? 81 : range * range;
+            }
+            else if (requested == OperationKind.Division)
+            {
+                operandCap = level == PracticeLevel.Beginner ? 9 : range;
+                resultCap = level == PracticeLevel.Beginner ? 81 : range;
+            }
+            else
+            {
+                operandCap = range;
+                resultCap = range;
+            }
+
+            int firstCap = requested == OperationKind.Division ? resultCap : operandCap;
+            if (problem.Numbers[0] < 0 || problem.Numbers[0] > firstCap) { why = "first operand outside range"; return false; }
+            if (requested == OperationKind.Multiplication && level == PracticeLevel.Beginner && problem.Numbers[0] < 1) { why = "beginner factor outside 9x9 table"; return false; }
             int calculated = problem.Numbers[0];
             bool hasPlus = false, hasMinus = false;
             for (int i = 0; i < problem.Operators.Length; i++)
@@ -101,16 +124,22 @@ namespace ArithmeticPractice
                 int number = problem.Numbers[i + 1];
                 if (op == OperationKind.Addition) { hasPlus = true; calculated += number; }
                 else if (op == OperationKind.Subtraction) { hasMinus = true; calculated -= number; }
-                else if (op == OperationKind.Multiplication) calculated *= number;
+                else if (op == OperationKind.Multiplication)
+                {
+                    if (number < 0 || number > operandCap) { why = "factor outside range"; return false; }
+                    if (level == PracticeLevel.Beginner && number < 1) { why = "beginner factor outside 9x9 table"; return false; }
+                    calculated *= number;
+                }
                 else
                 {
                     if (number == 0 || calculated % number != 0) { why = "non-exact division"; return false; }
+                    if (number > operandCap) { why = "divisor outside range"; return false; }
                     calculated /= number;
                 }
-                if (calculated < 0 || calculated > range) { why = "intermediate outside range"; return false; }
+                if (calculated < 0 || calculated > resultCap) { why = "intermediate outside range"; return false; }
             }
             if (calculated != problem.Result) { why = "result"; return false; }
-            if (problem.Answer < 0 || problem.Answer > range) { why = "answer outside range"; return false; }
+            if (problem.Answer < 0 || problem.Answer > resultCap) { why = "answer outside range"; return false; }
             if (requested == OperationKind.Mixed && level == PracticeLevel.Advanced && (!hasPlus || !hasMinus)) { why = "advanced mixed must contain + and -"; return false; }
             if (problem.DisplayText.IndexOf('?') < 0 || problem.SpeechText.IndexOf("未知数", StringComparison.Ordinal) < 0) { why = "question rendering"; return false; }
             return true;
@@ -147,6 +176,7 @@ namespace ArithmeticPractice
         private ComboBox _operandCountBox;
         private ComboBox _rangeBox;
         private Label _operandCountLabel;
+        private Label _rangeLabel;
         private Label _questionLabel;
         private Label _progressLabel;
         private Label _statusLabel;
@@ -194,6 +224,7 @@ namespace ArithmeticPractice
             _operandCountBox = SettingsBox("高级数字数量", "高级练习使用的数字数量，可选择三、四或五，默认三个。", 90, new[] { "3个数", "4个数", "5个数" }, 0);
             settings.Controls.Add(_operandCountBox);
             settings.Controls.Add(SettingsLabel("范围：", 14));
+            _rangeLabel = settings.Controls[settings.Controls.Count - 1] as Label;
             _rangeBox = SettingsBox("数字范围", "选择十以内、二十以内或一百以内，题目计算过程不会超过所选范围。", 110, new[] { "10以内", "20以内", "100以内" }, 1);
             settings.Controls.Add(_rangeBox);
 
@@ -213,7 +244,7 @@ namespace ArithmeticPractice
             buttons.Controls.Add(_replayButton); buttons.Controls.Add(_submitButton); buttons.Controls.Add(_nextButton);
 
             _statusLabel = new Label { AutoSize = true, Text = "状态：准备开始。", AccessibleName = "状态：准备开始。", Margin = new Padding(0, 2, 0, 8) };
-            var help = new Label { AutoSize = true, Text = "初级：2个数求结果；中级：问号可在等式任意位置；高级：3至5个数。复合运算高级同时包含加法和减法。", AccessibleName = "级别说明。初级两个数求结果；中级问号可在任意位置；高级三至五个数；复合高级同时有加法和减法。", Margin = new Padding(0, 0, 0, 8) };
+            var help = new Label { AutoSize = true, Text = "初级：2个数求结果；中级：问号可在等式任意位置；高级：3至5个数。复合运算高级同时包含加法和减法。乘除法：初级固定9×9乘法表以内；中级和高级与范围联动，乘法因数、除法被除数不超过所选范围。", AccessibleName = "级别说明。初级两个数求结果；中级问号可在任意位置；高级三至五个数；复合高级同时有加法和减法。乘除法初级固定9×9乘法表以内，中级和高级与范围联动。", Margin = new Padding(0, 0, 0, 8) };
             _historyBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, BackColor = Color.White, AccessibleName = "答题记录", AccessibleDescription = "最近的题目、答案和对错记录。", TabStop = true };
 
             layout.Controls.Add(title, 0, 0); layout.Controls.Add(settings, 0, 1); layout.Controls.Add(_progressLabel, 0, 2); layout.Controls.Add(_questionLabel, 0, 3); layout.Controls.Add(answerPrompt, 0, 4); layout.Controls.Add(_answerBox, 0, 5); layout.Controls.Add(buttons, 0, 6); layout.Controls.Add(_statusLabel, 0, 7); layout.Controls.Add(_historyBox, 0, 8);
@@ -224,6 +255,7 @@ namespace ArithmeticPractice
             _operandCountBox.SelectedIndexChanged += SettingsChanged;
             _rangeBox.SelectedIndexChanged += SettingsChanged;
             UpdateOperandCountState();
+            UpdateRangeState();
         }
 
         private static Label SettingsLabel(string text, int left) { return new Label { Text = text, AutoSize = true, Margin = new Padding(left, 7, 2, 0) }; }
@@ -263,9 +295,23 @@ namespace ArithmeticPractice
             _operandCountBox.AccessibleDescription = advanced ? "高级练习使用的数字数量，可选择三、四或五。" : "只有高级练习可以设置数字数量。当前不可用。";
         }
 
+        /// <summary>初级乘除法固定 9×9 乘法表以内，此时停用范围下拉框；中级和高级与范围联动。</summary>
+        private void UpdateRangeState()
+        {
+            if (_rangeBox == null || _rangeLabel == null) return;
+            bool multDiv = SelectedOperation == OperationKind.Multiplication || SelectedOperation == OperationKind.Division;
+            bool fixedByLevel = multDiv && SelectedLevel == PracticeLevel.Beginner;
+            _rangeBox.Enabled = !fixedByLevel;
+            _rangeLabel.Enabled = !fixedByLevel;
+            _rangeBox.AccessibleDescription = fixedByLevel
+                ? "初级乘法和除法固定在9×9乘法表以内。当前不可用。"
+                : "选择十以内、二十以内或一百以内。加减法的结果、乘法的因数、除法的被除数都不会超过所选范围；初级乘除法固定在9×9乘法表以内。";
+        }
+
         private void SettingsChanged(object sender, EventArgs e)
         {
             if (!IsHandleCreated || _questionLabel == null) return;
+            UpdateRangeState();
             _questionNumber = 0; _correctCount = 0; _wrongCount = 0; _historyBox.Clear(); NewProblem(true);
         }
 
@@ -290,6 +336,8 @@ namespace ArithmeticPractice
         {
             string text = _levelBox == null || _levelBox.SelectedItem == null ? "初级" : _levelBox.SelectedItem.ToString();
             if (SelectedLevel == PracticeLevel.Advanced) text += "，" + SelectedOperandCount + "个数";
+            if (SelectedOperation == OperationKind.Multiplication || SelectedOperation == OperationKind.Division)
+                text += "；乘除范围" + (SelectedLevel == PracticeLevel.Beginner ? "9×9乘法表以内" : SelectedRange + "以内");
             return text;
         }
 

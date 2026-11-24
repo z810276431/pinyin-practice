@@ -24,25 +24,26 @@ namespace PracticeToolkit
         private bool _speechOk;
         private Button _pinyinButton;
         private Button _arithmeticButton;
+        private Button _scenarioButton;
         private Label _statusLabel;
 
         public ToolkitForm()
         {
             Text = "学习练习小工具整合包";
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(620, 430);
-            Size = new Size(720, 500);
+            MinimumSize = new Size(620, 540);
+            Size = new Size(720, 620);
             Font = new Font("Microsoft YaHei UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
             AutoScaleMode = AutoScaleMode.Dpi;
             AccessibleName = "学习练习小工具整合包";
-            AccessibleDescription = "请选择拼音打字练习或数学加减乘除算术练习。";
+            AccessibleDescription = "请选择拼音打字练习、数学加减乘除算术练习或情景数学应用题练习。";
 
             BuildUi();
             InitSpeech();
             Shown += delegate
             {
                 try { _pinyinButton.Focus(); } catch { }
-                Say("学习练习小工具整合包。请选择工具。第一个，拼音打字练习。第二个，数学加减乘除算术练习。");
+                Say("学习练习小工具整合包。请选择工具。第一个，拼音打字练习。第二个，数学加减乘除算术练习。第三个，情景数学应用题练习。");
             };
             FormClosed += delegate
             {
@@ -57,14 +58,15 @@ namespace PracticeToolkit
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 7,
+                RowCount = 8,
                 Padding = new Padding(24)
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 34F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 33F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 33F));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -99,6 +101,13 @@ namespace PracticeToolkit
             _arithmeticButton.AccessibleName = "打开数学加减乘除算术练习";
             _arithmeticButton.AccessibleDescription = "练习加法、减法、乘法、除法以及混合运算。";
 
+            _scenarioButton = CreateToolButton(
+                "情景数学应用题练习",
+                "系统语音朗读情景应用题，例如衣服和裤子的搭配。从情景中找数字关系，输入整数答案。",
+                "ScenarioMathPractice.exe");
+            _scenarioButton.AccessibleName = "打开情景数学应用题练习";
+            _scenarioButton.AccessibleDescription = "练习加减乘除情景应用题，支持导入和编辑情景题库。";
+
             _statusLabel = new Label
             {
                 AutoSize = true,
@@ -109,8 +118,8 @@ namespace PracticeToolkit
             var help = new Label
             {
                 AutoSize = true,
-                Text = "提示：两个练习工具也可以绕过整合包，分别直接运行各自的 exe 文件。",
-                AccessibleName = "提示：两个练习工具也可以分别直接运行。",
+                Text = "提示：三个练习工具也可以绕过整合包，分别直接运行各自的 exe 文件。",
+                AccessibleName = "提示：三个练习工具也可以分别直接运行。",
                 Margin = new Padding(0, 0, 0, 8)
             };
             var close = new Button
@@ -126,9 +135,10 @@ namespace PracticeToolkit
             layout.Controls.Add(intro, 0, 1);
             layout.Controls.Add(_pinyinButton, 0, 2);
             layout.Controls.Add(_arithmeticButton, 0, 3);
-            layout.Controls.Add(_statusLabel, 0, 4);
-            layout.Controls.Add(help, 0, 5);
-            layout.Controls.Add(close, 0, 6);
+            layout.Controls.Add(_scenarioButton, 0, 4);
+            layout.Controls.Add(_statusLabel, 0, 5);
+            layout.Controls.Add(help, 0, 6);
+            layout.Controls.Add(close, 0, 7);
             Controls.Add(layout);
             CancelButton = close;
         }
@@ -157,7 +167,7 @@ namespace PracticeToolkit
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, executable);
             if (!File.Exists(path))
             {
-                string status = "状态：找不到 " + executable + "。请确认三个 exe 文件在同一目录。";
+                string status = "状态：找不到 " + executable + "。请确认四个 exe 文件在同一目录。";
                 UpdateStatus(status);
                 Say("打开失败。找不到" + title + "。请确认程序文件在同一目录。");
                 MessageBox.Show(this, status, "无法打开工具", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -168,7 +178,7 @@ namespace PracticeToolkit
             try
             {
                 Process.Start(path);
-                UpdateStatus("状态：已打开" + title + "。整合包窗口仍然保留，可继续打开其他工具。" );
+                UpdateStatus("状态：已打开" + title + "。整合包窗口仍然保留，可继续打开其他工具。");
                 Say("已打开" + title + "。");
                 try { button.Focus(); } catch { }
             }

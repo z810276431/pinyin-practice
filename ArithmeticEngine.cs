@@ -125,28 +125,36 @@ namespace ArithmeticPractice
             int result;
             if (requested == OperationKind.Division)
             {
+                // 初级固定在 9×9 乘法表以内（商、除数不超过 9，被除数不超过 81）；
+                // 中级和高级与范围联动：被除数不超过所选范围，商随之不超过被除数。
                 // Build backwards: dividend = quotient * all divisors.
                 // Each left-to-right division is exact and never divides by zero.
                 // Positive terms avoid ambiguous intermediate questions like 0 / ? = 0.
-                result = _random.Next(1, Math.Min(10, range) + 1);
+                int dividendBound = level == PracticeLevel.Beginner ? 81 : range;
+                int divisorCap = level == PracticeLevel.Beginner ? 9 : range;
+                result = _random.Next(1, dividendBound + 1);
                 int dividend = result;
                 for (int i = 1; i < count; i++)
                 {
-                    numbers[i] = _random.Next(1, Math.Min(20, range / dividend) + 1);
+                    numbers[i] = _random.Next(1, Math.Min(divisorCap, dividendBound / dividend) + 1);
                     dividend *= numbers[i];
                 }
                 numbers[0] = dividend;
             }
             else if (requested == OperationKind.Multiplication)
             {
+                // 初级固定在 9×9 乘法表以内（因数 1..9，积不超过 81）；
+                // 中级和高级与范围联动：因数不超过所选范围，连乘的积不超过范围数的平方。
+                int factorBound = level == PracticeLevel.Beginner ? 9 : range;
+                long productCap = level == PracticeLevel.Beginner ? 81 : (long)range * range;
                 // Do not allow a zero factor for intermediate equations: ? * 0 = 0
-                // would not have a unique solution.
-                int minimum = level == PracticeLevel.Intermediate ? 1 : 0;
-                numbers[0] = _random.Next(minimum, Math.Min(20, range) + 1);
+                // would not have a unique solution. 初级按乘法表取 1..9；高级沿用允许 0。
+                int minimum = level == PracticeLevel.Advanced ? 0 : 1;
+                numbers[0] = _random.Next(minimum, factorBound + 1);
                 result = numbers[0];
                 for (int i = 1; i < count; i++)
                 {
-                    int maximum = result == 0 ? Math.Min(20, range) : Math.Min(20, range / result);
+                    int maximum = result == 0 ? factorBound : (int)Math.Min(factorBound, productCap / result);
                     numbers[i] = _random.Next(minimum, maximum + 1);
                     result *= numbers[i];
                 }

@@ -271,6 +271,7 @@ function New-ReleaseNotes {
     $lines.Add('| PracticeToolkit.exe | 整合包启动器，选择要练习的工具 |')
     $lines.Add('| PinyinPractice.exe | 拼音打字练习，可独立运行 |')
     $lines.Add('| ArithmeticPractice.exe | 数学加减乘除算术练习，可独立运行 |')
+    $lines.Add('| ScenarioMathPractice.exe | 情景数学应用题练习，可独立运行 |')
     $lines.Add('')
     $lines.Add('### 下载与安装')
     $lines.Add('')
@@ -359,7 +360,7 @@ try {
         if ($LASTEXITCODE -ne 0) { Fail '编译失败，已中止发版。' }
     }
 
-    $exes = @('PracticeToolkit.exe', 'PinyinPractice.exe', 'ArithmeticPractice.exe')
+    $exes = @('PracticeToolkit.exe', 'PinyinPractice.exe', 'ArithmeticPractice.exe', 'ScenarioMathPractice.exe')
     foreach ($exe in $exes) {
         $path = Join-Path $root $exe
         if (-not (Test-Path $path)) { Fail "缺少可执行文件：$exe。请先完整编译。" }
@@ -391,7 +392,9 @@ try {
         'PracticeToolkit.exe',
         'PinyinPractice.exe',
         'ArithmeticPractice.exe',
+        'ScenarioMathPractice.exe',
         'words.txt',
+        '情景题库.txt',
         'README.txt',
         'build.cmd',
         'test.cmd',
@@ -518,6 +521,8 @@ try {
     foreach ($exe in $exes) { $uploadFiles += @{ Path = (Join-Path $root $exe); Name = $exe } }
     $wordsPath = Join-Path $root 'words.txt'
     if (Test-Path $wordsPath) { $uploadFiles += @{ Path = $wordsPath; Name = 'words.txt' } }
+    $bankPath = Join-Path $root '情景题库.txt'
+    if (Test-Path $bankPath) { $uploadFiles += @{ Path = $bankPath; Name = '情景题库.txt' } }
 
     # 同名旧附件先删除，保证附件与本次构建一致。
     # 无附件时 API 可能返回空值、空数组或嵌套空数组，这里逐个校验对象类型，

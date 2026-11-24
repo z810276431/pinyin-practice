@@ -28,10 +28,25 @@ call :compile_math winexe ArithmeticPractice.exe
 if errorlevel 1 exit /b 1
 call :compile_math exe ArithmeticPracticeTests.exe
 if errorlevel 1 exit /b 1
+call :compile_scenario winexe ScenarioMathPractice.exe
+if errorlevel 1 exit /b 1
+call :compile_scenario exe ScenarioMathPracticeTests.exe
+if errorlevel 1 exit /b 1
 call :compile winexe PracticeToolkit.exe PracticeToolkit.cs
 if errorlevel 1 exit /b 1
 
-echo [OK] PracticeToolkit.exe, PinyinPractice.exe and ArithmeticPractice.exe created.
+echo [OK] PracticeToolkit.exe, PinyinPractice.exe, ArithmeticPractice.exe and ScenarioMathPractice.exe created.
+exit /b 0
+
+:compile_scenario
+set "TARGET=%~1"
+set "OUTPUT=%~2"
+echo Building %OUTPUT%...
+"%CSC%" /nologo /target:%TARGET% /out:"%~dp0%OUTPUT%" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:"%SPEECH%" "%~dp0ScenarioMathEngine.cs" "%~dp0ScenarioMathPractice.cs"
+if errorlevel 1 (
+  echo [ERROR] Failed to build %OUTPUT%.
+  exit /b 1
+)
 exit /b 0
 
 :compile_math

@@ -97,6 +97,34 @@ internal static class ArithmeticKeyboardTests
                 operation.SelectedIndex = 0;
                 level.SelectedIndex = 0;
                 Application.DoEvents();
+
+                // Alt+数字 循环切换设置选项，无需鼠标。
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D2));
+                Assert(level.SelectedIndex == 1, "Alt+2 cycles practice level to intermediate");
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D2));
+                Assert(level.SelectedIndex == 2, "Alt+2 cycles practice level to advanced");
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D2));
+                Assert(level.SelectedIndex == 0, "Alt+2 wraps practice level back to beginner");
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Assert(operation.SelectedIndex == 1, "Alt+1 cycles operation type to addition");
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D3));
+                Assert(rangeBox.SelectedIndex == 2, "Alt+3 cycles number range to within hundred");
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D3));
+                Assert(rangeBox.SelectedIndex == 0, "Alt+3 wraps number range to within ten");
+                int operandBefore = operandCount.SelectedIndex;
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D4));
+                Assert(!operandCount.Enabled && operandCount.SelectedIndex == operandBefore,
+                    "Alt+4 ignores disabled operand count");
+                level.SelectedIndex = 2;
+                Application.DoEvents();
+                Call(form, "ArithmeticForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D4));
+                Assert(operandCount.SelectedIndex == (operandBefore + 1) % 3, "Alt+4 cycles operand count when advanced");
+                operation.SelectedIndex = 0;
+                level.SelectedIndex = 0;
+                rangeBox.SelectedIndex = 1;
+                operandCount.SelectedIndex = 0;
+                Application.DoEvents();
+
                 input.Text = "123";
                 input.Select(1, 0);
                 Assert(KeyMessage(input, Keys.F5), "F5 is consumed by arithmetic form");

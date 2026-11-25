@@ -196,7 +196,7 @@ namespace ArithmeticPractice
             AutoScaleMode = AutoScaleMode.Dpi;
             KeyPreview = true;
             AccessibleName = "数学加减乘除算术练习";
-            AccessibleDescription = "选择运算、级别和难度，听题后输入整数答案，按回车或空格确认。";
+            AccessibleDescription = "选择运算、级别和难度，听题后输入整数答案，按回车或空格确认。设置选项可用 Alt+1 到 Alt+4 键盘切换。";
             BuildUi();
             InitSpeech();
             KeyDown += ArithmeticForm_KeyDown;
@@ -244,7 +244,14 @@ namespace ArithmeticPractice
             buttons.Controls.Add(_replayButton); buttons.Controls.Add(_submitButton); buttons.Controls.Add(_nextButton);
 
             _statusLabel = new Label { AutoSize = true, Text = "状态：准备开始。", AccessibleName = "状态：准备开始。", Margin = new Padding(0, 2, 0, 8) };
-            var help = new Label { AutoSize = true, Text = "初级：2个数求结果；中级：问号可在等式任意位置；高级：3至5个数。复合运算高级同时包含加法和减法。乘除法：初级固定9×9乘法表以内；中级和高级与范围联动，乘法因数、除法被除数不超过所选范围。", AccessibleName = "级别说明。初级两个数求结果；中级问号可在任意位置；高级三至五个数；复合高级同时有加法和减法。乘除法初级固定9×9乘法表以内，中级和高级与范围联动。", Margin = new Padding(0, 0, 0, 8) };
+            var help = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new Size(860, 0),
+                Text = "初级：2个数求结果；中级：问号可在等式任意位置；高级：3至5个数。复合运算高级同时包含加法和减法。乘除法：初级固定9×9乘法表以内；中级和高级与范围联动，乘法因数、除法被除数不超过所选范围。设置选项可用键盘切换：Alt+1 运算类型、Alt+2 级别、Alt+3 范围、Alt+4 数量，每按一次切到下一项，无需鼠标。",
+                AccessibleName = "级别说明。初级两个数求结果；中级问号可在任意位置；高级三至五个数；复合高级同时有加法和减法。乘除法初级固定9×9乘法表以内，中级和高级与范围联动。设置选项可用 Alt+1、Alt+2、Alt+3、Alt+4 键盘切换，每按一次切到下一项。",
+                Margin = new Padding(0, 0, 0, 8)
+            };
             _historyBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, BackColor = Color.White, AccessibleName = "答题记录", AccessibleDescription = "最近的题目、答案和对错记录。", TabStop = true };
 
             layout.Controls.Add(title, 0, 0); layout.Controls.Add(settings, 0, 1); layout.Controls.Add(_progressLabel, 0, 2); layout.Controls.Add(_questionLabel, 0, 3); layout.Controls.Add(answerPrompt, 0, 4); layout.Controls.Add(_answerBox, 0, 5); layout.Controls.Add(buttons, 0, 6); layout.Controls.Add(_statusLabel, 0, 7); layout.Controls.Add(_historyBox, 0, 8);
@@ -382,6 +389,25 @@ namespace ArithmeticPractice
         {
             if (e.KeyCode == Keys.F5 || (e.Control && e.KeyCode == Keys.R)) { e.SuppressKeyPress = true; ReplayProblem(); }
             else if (e.Control && e.KeyCode == Keys.N) { e.SuppressKeyPress = true; NewProblem(true); }
+            else if (e.Alt && e.KeyCode == Keys.D1) { e.SuppressKeyPress = true; CycleBox(_operationBox, "运算类型"); }
+            else if (e.Alt && e.KeyCode == Keys.D2) { e.SuppressKeyPress = true; CycleBox(_levelBox, "级别"); }
+            else if (e.Alt && e.KeyCode == Keys.D3) { e.SuppressKeyPress = true; CycleBox(_rangeBox, "范围"); }
+            else if (e.Alt && e.KeyCode == Keys.D4) { e.SuppressKeyPress = true; CycleBox(_operandCountBox, "数量"); }
+        }
+
+        /// <summary>用键盘循环切换设置下拉框：每按一次切到下一项，切完自动换一题并播报。</summary>
+        private void CycleBox(ComboBox box, string name)
+        {
+            if (box == null) return;
+            if (!box.Enabled)
+            {
+                UpdateStatus("状态：" + name + "选项当前不可用。", false);
+                Say(name + "选项当前不可用。", true);
+                return;
+            }
+            int next = box.SelectedIndex < 0 ? 0 : (box.SelectedIndex + 1) % box.Items.Count;
+            box.SelectedIndex = next; // 触发 SettingsChanged，自动重置进度并换一题
+            Say(name + "：" + box.SelectedItem + "。", false);
         }
     }
 }

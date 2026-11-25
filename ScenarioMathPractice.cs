@@ -392,7 +392,7 @@ namespace ScenarioMathPractice
             AutoScaleMode = AutoScaleMode.Dpi;
             KeyPreview = true;
             AccessibleName = "情景数学应用题练习";
-            AccessibleDescription = "听读情景应用题，从题目里找出数字关系，输入整数答案，按回车或空格确认。";
+            AccessibleDescription = "听读情景应用题，从题目里找出数字关系，输入整数答案，按回车或空格确认。设置选项可用 Alt+1 到 Alt+3 键盘切换。";
             BuildUi();
             InitSpeech();
             LoadBank(useStatus: false);
@@ -461,8 +461,9 @@ namespace ScenarioMathPractice
             var help = new Label
             {
                 AutoSize = true,
-                Text = "初级：单步计算；中级：两步计算；高级：三步混合运算。乘除类题目：初级固定9×9乘法表以内，中级和高级与范围联动。题库文件 情景题库.txt 与程序放在同一目录。",
-                AccessibleName = "级别说明。初级单步计算；中级两步计算；高级三步混合运算。乘除类题目初级固定9×9乘法表以内，中级和高级与范围联动。",
+                MaximumSize = new Size(880, 0),
+                Text = "初级：单步计算；中级：两步计算；高级：三步混合运算。乘除类题目：初级固定9×9乘法表以内，中级和高级与范围联动。题库文件 情景题库.txt 与程序放在同一目录。设置选项可用键盘切换：Alt+1 类别、Alt+2 级别、Alt+3 范围，每按一次切到下一项，无需鼠标。",
+                AccessibleName = "级别说明。初级单步计算；中级两步计算；高级三步混合运算。乘除类题目初级固定9×9乘法表以内，中级和高级与范围联动。设置选项可用 Alt+1、Alt+2、Alt+3 键盘切换，每按一次切到下一项。",
                 Margin = new Padding(0, 0, 0, 8)
             };
             _historyBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, BackColor = Color.White, AccessibleName = "答题记录", AccessibleDescription = "最近的题目、答案和对错记录。", TabStop = true };
@@ -710,6 +711,24 @@ namespace ScenarioMathPractice
             else if (e.Control && e.KeyCode == Keys.I) { e.SuppressKeyPress = true; ImportBank(); }
             else if (e.Control && e.KeyCode == Keys.T) { e.SuppressKeyPress = true; ExportTemplate(); }
             else if (e.Control && e.KeyCode == Keys.L) { e.SuppressKeyPress = true; LoadBank(true); NewProblem(true); }
+            else if (e.Alt && e.KeyCode == Keys.D1) { e.SuppressKeyPress = true; CycleBox(_categoryBox, "类别"); }
+            else if (e.Alt && e.KeyCode == Keys.D2) { e.SuppressKeyPress = true; CycleBox(_levelBox, "级别"); }
+            else if (e.Alt && e.KeyCode == Keys.D3) { e.SuppressKeyPress = true; CycleBox(_rangeBox, "范围"); }
+        }
+
+        /// <summary>用键盘循环切换设置下拉框：每按一次切到下一项，切完自动换一题并播报。</summary>
+        private void CycleBox(ComboBox box, string name)
+        {
+            if (box == null) return;
+            if (!box.Enabled)
+            {
+                UpdateStatus("状态：" + name + "选项当前不可用。", false);
+                Say(name + "选项当前不可用。", true);
+                return;
+            }
+            int next = box.SelectedIndex < 0 ? 0 : (box.SelectedIndex + 1) % box.Items.Count;
+            box.SelectedIndex = next; // 触发 SettingsChanged，自动重置进度并换一题
+            Say(name + "：" + box.SelectedItem + "。", false);
         }
     }
 }

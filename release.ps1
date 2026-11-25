@@ -277,7 +277,7 @@ function New-ReleaseNotes {
     $lines.Add('')
     $lines.Add(('1. 下载 `{0}` 并解压到任意目录。' -f $ZipName))
     $lines.Add('2. 双击 `PracticeToolkit.exe`，选择要练习的工具。')
-    $lines.Add('3. 三个 exe 必须在同一目录；也可以直接运行单个练习程序。')
+    $lines.Add('3. 四个 exe 必须在同一目录；也可以直接运行单个练习程序。')
     $lines.Add('')
     $lines.Add('### 运行要求')
     $lines.Add('')
@@ -388,6 +388,7 @@ try {
     }
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
+    # 面向使用者的安装包：只含程序、数据文件和说明，不打包任何编译与发版脚本。
     $payload = @(
         'PracticeToolkit.exe',
         'PinyinPractice.exe',
@@ -395,11 +396,7 @@ try {
         'ScenarioMathPractice.exe',
         'words.txt',
         '情景题库.txt',
-        'README.txt',
-        'build.cmd',
-        'test.cmd',
-        'release.cmd',
-        'release.ps1'
+        'README.txt'
     )
     if (Test-Path (Join-Path $root '词库模板.txt')) { $payload += '词库模板.txt' }
     foreach ($item in $payload) {

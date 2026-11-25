@@ -119,6 +119,24 @@ internal static class ScenarioKeyboardTests
                         modifiers + "+Space does not submit scenario answer");
                 }
 
+                // Alt+数字 循环切换设置选项，无需鼠标。
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Assert(category.SelectedIndex == 1, "Alt+1 cycles category to addition");
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D1));
+                Assert(category.SelectedIndex == 0, "Alt+1 wraps category back to all");
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D2));
+                Assert(level.SelectedIndex == 1, "Alt+2 cycles practice level");
+                Call(form, "ScenarioForm_KeyDown", form, new KeyEventArgs(Keys.Alt | Keys.D3));
+                Assert(range.SelectedIndex == 2, "Alt+3 cycles number range");
+                level.SelectedIndex = 0;
+                category.SelectedIndex = 0;
+                range.SelectedIndex = 1;
+                Application.DoEvents();
+
                 // 换一题增加题号。
                 int beforeNext = Field<int>(form, "_questionNumber");
                 Call(form, "NewProblem", true);
